@@ -33,6 +33,16 @@ if ! has_minimal || ! has_pickers; then
 fi
 has_minimal || { echo "::error::No 'minimal' Qt platform plugin available in $TARGET"; exit 2; }
 
+# Install the freshly built RPM into the target so the check runs against
+# the packaged QML and icons, exactly as they land on the phone.
+shopt -s nullglob
+rpms=(/workspace/RPMS/harbour-linkdrop-[0-9]*."${SFOS_ARCH}".rpm)
+[ ${#rpms[@]} -eq 1 ] || { echo "::error::expected one app RPM, found: ${rpms[*]:-none}"; exit 2; }
+echo "::group::Install ${rpms[0]##*/} into $TARGET"
+$SB2 -m sdk-install -R rpm -Uvh --force "${rpms[0]}" || { echo "::error::RPM install into target failed"; exit 1; }
+$SB2 rpm -q harbour-linkdrop
+echo "::endgroup::"
+
 SRC="$HOME/smoke-src"
 rm -rf "$SRC" && mkdir -p "$SRC"
 tar -C /workspace --exclude=./.git --exclude=./RPMS -cf - . | tar -C "$SRC" -xf -
@@ -43,4 +53,4 @@ $SB2 qmake ../qmlcheck.pro && $SB2 make -j"$(nproc)" || { echo "::error::qmlchec
 echo "::endgroup::"
 
 mkdir -p /tmp/xdg && chmod 700 /tmp/xdg
-$SB2 /bin/sh -c 'XDG_RUNTIME_DIR=/tmp/xdg QT_QPA_PLATFORM=minimal QV4_FORCE_INTERPRETER=1 ./qmlcheck "$1"' _ "$SRC/qml"
+$SB2 /bin/sh -c 'XDG_RUNTIME_DIR=/tmp/xdg QT_QPA_PLATFORM=minimal QV4_FORCE_INTERPRETER=1 ./qmlcheck "$1"' _ /usr/share/harbour-linkdrop/qml

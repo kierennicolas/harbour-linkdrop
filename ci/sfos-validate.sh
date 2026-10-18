@@ -16,14 +16,13 @@ echo "--- requires"
 rpm -qpR "$RPM"
 echo "::endgroup::"
 
-VALIDATOR=$(command -v rpmvalidation.sh || true)
-if [ -z "$VALIDATOR" ] && [ -x /usr/share/sdk-harbour-rpmvalidator/rpmvalidation.sh ]; then
-  VALIDATOR=/usr/share/sdk-harbour-rpmvalidator/rpmvalidation.sh
+# Use the current Harbour rules from Jolla's validator repository. The SDK's
+# own copy (wrapped by /usr/bin/rpmvalidation, which needs a target) is the
+# fallback when GitHub is unreachable.
+if git clone -q --depth 1 https://github.com/sailfishos/sdk-harbour-rpmvalidator.git /tmp/rpmvalidator; then
+  echo "Harbour validator: upstream $(git -C /tmp/rpmvalidator log -1 --format='%h %cd' --date=short)"
+  /tmp/rpmvalidator/rpmvalidation.sh --no-color "$RPM"
+else
+  echo "Harbour validator: SDK copy"
+  /usr/libexec/sdk-harbour-rpmvalidator/rpmvalidation.sh --no-color -g /usr/share/sdk-harbour-rpmvalidator "$RPM"
 fi
-if [ -z "$VALIDATOR" ]; then
-  git clone -q --depth 1 https://github.com/sailfishos/sdk-harbour-rpmvalidator.git /tmp/rpmvalidator
-  VALIDATOR=/tmp/rpmvalidator/rpmvalidation.sh
-fi
-echo "Using validator: $VALIDATOR"
-cd "$(dirname "$VALIDATOR")"
-"$VALIDATOR" "$RPM"

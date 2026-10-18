@@ -87,7 +87,7 @@ jobs:
             exit 1
           fi
           ls -l RPMS
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         with:
           name: harbour-linkdrop-${{ matrix.arch }}
@@ -124,7 +124,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           path: dist
           merge-multiple: true
