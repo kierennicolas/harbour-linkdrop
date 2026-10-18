@@ -59,8 +59,10 @@ Running the workflow by hand with **online test** ticked also uploads a small
 random file to Litterbox (1 hour expiry), downloads it back and compares the
 bytes, then checks that cancelling a large upload works.
 
-To cut a release: bump `Version:` in `rpm/harbour-linkdrop.spec`, then
-`git tag v0.1.1 && git push --tags`.
+To cut a release: bump `Version:` in `rpm/harbour-linkdrop.spec`, then either
+`git tag v0.1.1 && git push --tags`, or on GitHub go to **Releases → Draft a
+new release**, type a new tag such as `v0.1.1`, and publish. Either way the
+workflow builds the RPMs and attaches them to that release.
 
 ### Building locally
 

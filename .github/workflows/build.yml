@@ -141,4 +141,10 @@ jobs:
           Built against Sailfish OS ${SFOS_RELEASE}; installs on that release and later.
           See the README for install steps.
           EOF
-          gh release create "$TAG" dist/*.rpm --repo "$GITHUB_REPOSITORY" --title "LinkDrop ${TAG#v}" --notes-file notes.md
+          # Works both for a pushed tag and for a release drafted in the GitHub UI
+          # (which creates the tag and the release before this job runs).
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.rpm --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" dist/*.rpm --repo "$GITHUB_REPOSITORY" --title "LinkDrop ${TAG#v}" --notes-file notes.md
+          fi
