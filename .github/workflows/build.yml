@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Qt 5
         run: |
           sudo apt-get update -q
@@ -62,7 +62,7 @@ jobs:
           - arch: aarch64
             image: coderus/sailfishos-platform-sdk
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Free disk space for the SDK image
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
@@ -70,41 +70,46 @@ jobs:
       - name: Pull Sailfish SDK ${{ env.SFOS_RELEASE }}
         run: docker pull "$SDK_IMAGE:$SFOS_RELEASE"
       - name: Build RPM
+        id: build
         run: |
           set -o pipefail
           mkdir -p RPMS && chmod a+rwx RPMS
-          docker run --rm --privileged \
-            -e SFOS_RELEASE -e SFOS_ARCH=${{ matrix.arch }} \
-            -v "$GITHUB_WORKSPACE:/workspace" \
-            "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-build.sh 2>&1 | tee build.log
+          if ! docker run --rm --privileged \
+              -e SFOS_RELEASE -e SFOS_ARCH=${{ matrix.arch }} \
+              -v "$GITHUB_WORKSPACE:/workspace" \
+              "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-build.sh 2>&1 | tee build.log; then
+            ci/annotate.sh error "RPM build log" build.log 120
+            exit 1
+          fi
           ls -l RPMS
-      - name: Show why the build failed
-        if: failure()
-        run: |
-          {
-            echo '### RPM build failed: last 80 lines'
-            echo '```'
-            tail -n 80 build.log 2>/dev/null || echo '(no build log)'
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         with:
           name: harbour-linkdrop-${{ matrix.arch }}
           path: RPMS/harbour-linkdrop-[0-9]*.${{ matrix.arch }}.rpm
           if-no-files-found: error
       - name: Harbour RPM validator
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
+          set -o pipefail
+          rc=0
           docker run --rm --privileged \
             -e SFOS_RELEASE -e SFOS_ARCH=${{ matrix.arch }} \
             -v "$GITHUB_WORKSPACE:/workspace" \
-            "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-validate.sh
+            "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-validate.sh 2>&1 | tee validate.log || rc=$?
+          ci/annotate.sh "$([ $rc = 0 ] && echo notice || echo error)" "Harbour validator ${{ matrix.arch }}" validate.log 200
+          exit $rc
       - name: Load QML with real Silica
-        if: matrix.arch == 'armv7hl'
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && matrix.arch == 'armv7hl' }}
         run: |
+          set -o pipefail
+          rc=0
           docker run --rm --privileged \
             -e SFOS_RELEASE -e SFOS_ARCH=${{ matrix.arch }} \
             -v "$GITHUB_WORKSPACE:/workspace" \
-            "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-qml-smoke.sh
+            "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-qml-smoke.sh 2>&1 | tee qml.log || rc=$?
+          ci/annotate.sh "$([ $rc = 0 ] && echo notice || echo error)" "QML smoke test" qml.log 200
+          exit $rc
 
   release:
     name: GitHub release
@@ -114,7 +119,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           path: dist
           merge-multiple: true
