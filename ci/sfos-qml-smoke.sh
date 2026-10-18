@@ -39,7 +39,9 @@ shopt -s nullglob
 rpms=(/workspace/RPMS/harbour-linkdrop-[0-9]*."${SFOS_ARCH}".rpm)
 [ ${#rpms[@]} -eq 1 ] || { echo "::error::expected one app RPM, found: ${rpms[*]:-none}"; exit 2; }
 echo "::group::Install ${rpms[0]##*/} into $TARGET"
-$SB2 -m sdk-install -R rpm -Uvh --force "${rpms[0]}" || { echo "::error::RPM install into target failed"; exit 1; }
+# /workspace is not visible in sb2's sdk-install mode; the home directory is.
+mkdir -p "$HOME/smoke-rpm" && cp "${rpms[0]}" "$HOME/smoke-rpm/"
+$SB2 -m sdk-install -R rpm -Uvh --force "$HOME/smoke-rpm/${rpms[0]##*/}" || { echo "::error::RPM install into target failed"; exit 1; }
 $SB2 rpm -q harbour-linkdrop
 echo "::endgroup::"
 
