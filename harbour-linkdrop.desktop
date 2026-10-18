@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+X-Nemo-Application-Type=silica-qt5
+Name=LinkDrop
+Comment=Select a file, upload and copy a link
+Exec=harbour-linkdrop
+Icon=harbour-linkdrop
+Categories=Network;FileTransfer;
+
+[X-Sailjail]
+OrganizationName=io.github.kierennicolas
+ApplicationName=linkdrop
+Permissions=Internet;UserDirs;RemovableMedia

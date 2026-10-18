@@ -1,0 +1,134 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      online_test:
+        description: 'Also upload a small test file to Litterbox (1 hour expiry) and download it back'
+        type: boolean
+        default: false
+      release:
+        description: 'Sailfish OS SDK target to build against (e.g. 4.5.0.16, 5.0.0.43, 5.1.0.11)'
+        default: '4.5.0.16'
+
+permissions:
+  contents: read
+
+env:
+  # RPMs built against this release install on it and on every later one
+  # (the Xperia XA2 is supported up to Sailfish OS 5.x).
+  SFOS_RELEASE: ${{ inputs.release || '4.5.0.16' }}
+
+jobs:
+  test:
+    name: Upload logic tests (desktop Qt 5)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt 5
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q qtbase5-dev qt5-qmake qtdeclarative5-dev-tools
+      - name: Lint QML
+        run: find qml -name '*.qml' -print0 | xargs -0 -n1 /usr/lib/qt5/bin/qmllint
+      - name: Build tests
+        run: |
+          mkdir -p tests/build && cd tests/build
+          qmake ../tests.pro && make -j"$(nproc)"
+      - name: Run tests
+        env:
+          LINKDROP_ONLINE_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.online_test && '1' || '0' }}
+        run: tests/build/tst_uploader -v1
+
+  rpm:
+    name: RPM (${{ matrix.arch }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      SDK_IMAGE: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Xperia XA2, X, 10 and other 32-bit devices. Single-target image (smaller).
+          - arch: armv7hl
+            image: coderus/sailfishos-platform-sdk-armv7hl
+          # Xperia 10 II and newer running a 64-bit image.
+          - arch: aarch64
+            image: coderus/sailfishos-platform-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space for the SDK image
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - name: Pull Sailfish SDK ${{ env.SFOS_RELEASE }}
+        run: docker pull "$SDK_IMAGE:$SFOS_RELEASE"
+      - name: Build RPM
+        run: |
+          set -o pipefail
+          mkdir -p RPMS && chmod a+rwx RPMS
+          docker run --rm --privileged \
+            -e SFOS_RELEASE -e SFOS_ARCH=${{ matrix.arch }} \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-build.sh 2>&1 | tee build.log
+          ls -l RPMS
+      - name: Show why the build failed
+        if: failure()
+        run: |
+          {
+            echo '### RPM build failed: last 80 lines'
+            echo '```'
+            tail -n 80 build.log 2>/dev/null || echo '(no build log)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: harbour-linkdrop-${{ matrix.arch }}
+          path: RPMS/harbour-linkdrop-[0-9]*.${{ matrix.arch }}.rpm
+          if-no-files-found: error
+      - name: Harbour RPM validator
+        run: |
+          docker run --rm --privileged \
+            -e SFOS_RELEASE -e SFOS_ARCH=${{ matrix.arch }} \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-validate.sh
+      - name: Load QML with real Silica
+        if: matrix.arch == 'armv7hl'
+        run: |
+          docker run --rm --privileged \
+            -e SFOS_RELEASE -e SFOS_ARCH=${{ matrix.arch }} \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$SDK_IMAGE:$SFOS_RELEASE" /bin/bash /workspace/ci/sfos-qml-smoke.sh
+
+  release:
+    name: GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, rpm]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ls -l dist
+          cat > notes.md <<EOF
+          **Sony Xperia XA2 (and other 32-bit devices): download the \`armv7hl\` RPM.**
+          The \`aarch64\` RPM is for 64-bit images (Xperia 10 II and newer).
+
+          Built against Sailfish OS ${SFOS_RELEASE}; installs on that release and later.
+          See the README for install steps.
+          EOF
+          gh release create "$TAG" dist/*.rpm --repo "$GITHUB_REPOSITORY" --title "LinkDrop ${TAG#v}" --notes-file notes.md
