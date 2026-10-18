@@ -32,22 +32,6 @@ and anything newer, including 5.x.
 - Application Cover shows the current upload status
 - Explicit Sailjail permission declarations for Internet and file access
 
-## Important: Wormhole is different
-
-**This application does not upload to wormhole.app.** Wormhole encrypts files
-in the browser before uploading and places the decryption key in the URL
-fragment. Its specialized upload and metadata protocol is not compatible with
-Litterbox/Catbox's public multipart API. This project deliberately uses a
-well-documented direct file-upload API rather than pretending to produce valid
-Wormhole links.
-
-Catbox and Litterbox **do not provide Wormhole-style end-to-end encryption**.
-Links should be treated as public bearer links and the server may access file
-contents. Never upload private keys, passwords or sensitive documents.
-
-Service availability, upload quotas, content policies, and file retention are
-controlled by the provider and may change.
-
 ## Use
 
 1. Tap **Choose file** (or pull down to choose a file).
