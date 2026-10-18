@@ -43,7 +43,12 @@ jobs:
       - name: Run tests
         env:
           LINKDROP_ONLINE_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.online_test && '1' || '0' }}
-        run: tests/build/tst_uploader -v1
+        run: |
+          set -o pipefail
+          rc=0
+          tests/build/tst_uploader 2>&1 | tee tests.log || rc=$?
+          ci/annotate.sh "$([ $rc = 0 ] && echo notice || echo error)" "Upload tests" tests.log 80
+          exit $rc
 
   rpm:
     name: RPM (${{ matrix.arch }})
