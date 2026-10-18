@@ -1,6 +1,6 @@
 Name:       harbour-linkdrop
 Summary:    Upload a file and copy a share link
-Version:    0.1.0
+Version:    0.1.1
 Release:    1
 Group:      Qt/Qt
 License:    MIT
@@ -17,8 +17,8 @@ BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  desktop-file-utils
 
 %description
-LinkDrop shares files over HTTPS from Sailfish OS using Catbox
-or temporary Litterbox hosting. It does not encrypt files end to end.
+LinkDrop shares files over HTTPS from Sailfish OS using temporary
+Litterbox hosting. It does not encrypt files end to end.
 
 %prep
 %autosetup -n %{name}-%{version}

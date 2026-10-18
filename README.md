@@ -28,7 +28,6 @@ and anything newer, including 5.x.
 - Waits for a successful server reply containing a valid URL before showing success
 - Copy the generated URL to Sailfish's clipboard
 - 1h, 12h, 24h, and 72h temporary hosting through Litterbox (maximum 1 GB)
-- Optional longer-lived Catbox hosting (maximum 200 MB)
 - Application Cover shows the current upload status
 - Explicit Sailjail permission declarations for Internet and file access
 
@@ -85,8 +84,7 @@ mkdir -p tests/build && cd tests/build && qmake ../tests.pro && make && ./tst_up
 
 - Pick a text file with spaces/non-ASCII name; upload; download and compare.
 - Pick a binary file; upload; verify bytes against source.
-- Confirm 1h/12h/24h/72h temporary mode returns `https://litter.catbox.moe/`.
-- Confirm 'Keep' mode returns `https://files.catbox.moe/`.
+- Confirm 1h/12h/24h/72h uploads return `https://litter.catbox.moe/`.
 - Test cancel, offline, server error, and filesize rejection.
 - Verify `Clipboard.text` survives changing to the IRC client.
 - Check permissions when picking from SD cards and other user folders.

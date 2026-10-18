@@ -36,7 +36,7 @@ public:
     double progress() const { return m_progress; }
 
     Q_INVOKABLE void chooseFile(const QString &pathOrUrl);
-    // Hours: 1, 12, 24, 72 = temporary Litterbox; 0 = permanent Catbox.
+    // Upload to Litterbox; the link expires after 1, 12, 24 or 72 hours.
     Q_INVOKABLE void upload(int hours);
     Q_INVOKABLE void cancel();
 
@@ -65,7 +65,6 @@ private:
     bool m_cancelRequested = false;
     bool m_timedOut = false;
     bool m_waitingForServer = false;
-    int m_hours = 24;
     QTimer *m_watchdog;
 };
 

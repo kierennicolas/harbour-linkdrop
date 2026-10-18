@@ -13,7 +13,6 @@ Page {
         case 1: return 12
         case 2: return 24
         case 3: return 72
-        case 4: return 0
         default: return 24
         }
     }
@@ -91,7 +90,6 @@ Page {
                     MenuItem { text: qsTr("12 hours") }
                     MenuItem { text: qsTr("24 hours") }
                     MenuItem { text: qsTr("72 hours") }
-                    MenuItem { text: qsTr("Keep (Catbox)") }
                 }
             }
 
@@ -101,9 +99,7 @@ Page {
                 wrapMode: Text.WordWrap
                 color: Theme.secondaryColor
                 font.pixelSize: Theme.fontSizeExtraSmall
-                text: expiry.currentIndex === 4
-                      ? qsTr("Catbox: up to 200 MB. Links are not automatically deleted.")
-                      : qsTr("Litterbox: up to 1 GB. Links expire automatically.")
+                text: qsTr("Litterbox: up to 1 GB. Links expire automatically.")
             }
 
             Button {

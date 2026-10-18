@@ -3,7 +3,7 @@ CONFIG += sailfishapp c++11
 QT += network
 
 # The RPM spec passes VERSION=%{version}; fall back for IDE builds.
-isEmpty(VERSION): VERSION = 0.1.0
+isEmpty(VERSION): VERSION = 0.1.1
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 
 SOURCES += \

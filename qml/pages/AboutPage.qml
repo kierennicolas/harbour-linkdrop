@@ -28,7 +28,7 @@ Page {
                 x: Theme.horizontalPageMargin
                 width: parent.width - 2 * x
                 wrapMode: Text.WordWrap
-                text: qsTr("Temporary uploads use Litterbox (1, 12, 24 or 72 hours; up to 1 GB). 'Keep' uploads use Catbox (up to 200 MB). Both are third-party services with their own rules and availability.")
+                text: qsTr("Uploads go to Litterbox and expire after 1, 12, 24 or 72 hours (up to 1 GB). Litterbox is a third-party service with its own rules and availability.")
             }
 
             SectionHeader { text: qsTr("Important privacy difference") }
@@ -45,7 +45,7 @@ Page {
                 width: parent.width - 2 * x
                 wrapMode: Text.WordWrap
                 color: Theme.secondaryColor
-                text: qsTr("Version %1. Native Sailfish Silica interface. Open source under the MIT licence; not affiliated with Catbox, Litterbox or Wormhole.").arg(appVersion)
+                text: qsTr("Version %1. Native Sailfish Silica interface. Open source under the MIT licence; not affiliated with Litterbox, Catbox or Wormhole.").arg(appVersion)
             }
         }
         VerticalScrollDecorator {}

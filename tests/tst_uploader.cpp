@@ -1,4 +1,4 @@
-// Tests for Uploader. The offline cases always run. The online cases upload a
+// Tests for Uploader (Litterbox only). The offline cases always run. The online cases upload a
 // small random file to Litterbox with a 1 hour expiry, download it again and
 // compare the bytes; they only run when LINKDROP_ONLINE_TEST=1.
 
@@ -190,6 +190,17 @@ private slots:
         QVERIFY(!u.busy());
     }
 
+    void permanentCatboxOptionIsGone()
+    {
+        // 0 used to mean a permanent Catbox upload; only Litterbox is supported now.
+        const QString path = writeRandomFile(QStringLiteral("keep.bin"), 16);
+        Uploader u;
+        u.chooseFile(path);
+        u.upload(0);
+        QCOMPARE(u.phase(), QStringLiteral("error"));
+        QCOMPARE(u.errorMessage(), QStringLiteral("Unsupported expiry setting."));
+    }
+
     void fileRemovedAfterSelectionFails()
     {
         const QString path = writeRandomFile(QStringLiteral("vanishing.bin"), 16);
@@ -243,22 +254,6 @@ private slots:
         QVERIFY(server.request.contains(
             QString::fromUtf8("name=\"fileToUpload\"; filename=\"Fête _quoted_ ✓.bin\"").toUtf8()));
         QVERIFY(server.request.contains(original));
-    }
-
-    void mockCatboxHasNoTimeField()
-    {
-        MockServer server;
-        QVERIFY(server.start());
-        server.body = "https://files.catbox.moe/xyz789.png";
-        qputenv("LINKDROP_TEST_ENDPOINT", server.url());
-        Uploader u;
-        u.chooseFile(writeRandomFile(QStringLiteral("pic.png"), 2048));
-        u.upload(0);
-        QVERIFY(waitForPhaseNot(u, QStringLiteral("uploading"), 10000));
-        qunsetenv("LINKDROP_TEST_ENDPOINT");
-        QCOMPARE(u.phase(), QStringLiteral("done"));
-        QCOMPARE(u.shareUrl(), QStringLiteral("https://files.catbox.moe/xyz789.png"));
-        QVERIFY(!server.request.contains("name=\"time\""));
     }
 
     void mockRejectsLinkFromWrongHost()

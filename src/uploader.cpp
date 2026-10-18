@@ -15,14 +15,13 @@
 #define APP_VERSION "dev"
 #endif
 
-static const qint64 kCatboxMaxBytes = 200LL * 1000 * 1000;
 static const qint64 kLitterboxMaxBytes = 1000LL * 1000 * 1000;
 // No bytes moving for this long while sending = stalled connection.
 static const int kStallTimeoutMs = 90 * 1000;
 // After the last byte is sent the server still has to store the file.
 static const int kServerReplyTimeoutMs = 5 * 60 * 1000;
 
-static QUrl endpointFor(int hours)
+static QUrl endpoint()
 {
 #ifdef LINKDROP_TESTING
     // Test builds only: lets the test suite point uploads at a local server.
@@ -30,9 +29,7 @@ static QUrl endpointFor(int hours)
     if (!testEndpoint.isEmpty())
         return QUrl(QString::fromUtf8(testEndpoint));
 #endif
-    return QUrl(hours == 0
-        ? QStringLiteral("https://catbox.moe/user/api.php")
-        : QStringLiteral("https://litterbox.catbox.moe/resources/internals/api.php"));
+    return QUrl(QStringLiteral("https://litterbox.catbox.moe/resources/internals/api.php"));
 }
 
 Uploader::Uploader(QObject *parent)
@@ -59,7 +56,7 @@ QString Uploader::readableBytes(qint64 size)
     return QString::number(double(size) / (1024.0 * 1024 * 1024), 'f', 2) + QStringLiteral(" GiB");
 }
 
-// Catbox/Litterbox report problems as a short plain-text body. Keep it short
+// Litterbox reports problems as a short plain-text body. Keep it short
 // and drop HTML error pages, which are not useful on a phone screen.
 QString Uploader::describeServerReply(const QByteArray &body)
 {
@@ -140,7 +137,7 @@ void Uploader::upload(int hours)
         fail(QStringLiteral("Choose a file first."));
         return;
     }
-    if (hours != 0 && hours != 1 && hours != 12 && hours != 24 && hours != 72) {
+    if (hours != 1 && hours != 12 && hours != 24 && hours != 72) {
         fail(QStringLiteral("Unsupported expiry setting."));
         return;
     }
@@ -149,11 +146,8 @@ void Uploader::upload(int hours)
         fail(QStringLiteral("The selected file is no longer readable."));
         return;
     }
-    const qint64 limit = hours == 0 ? kCatboxMaxBytes : kLitterboxMaxBytes;
-    if (info.size() > limit) {
-        fail(hours == 0
-             ? QStringLiteral("Catbox accepts files up to 200 MB. Choose a temporary link for files up to 1 GB.")
-             : QStringLiteral("Litterbox accepts files up to 1 GB."),
+    if (info.size() > kLitterboxMaxBytes) {
+        fail(QStringLiteral("Litterbox accepts files up to 1 GB."),
              QStringLiteral("File too large"));
         return;
     }
@@ -173,8 +167,7 @@ void Uploader::upload(int hours)
         body->append(part);
     };
     addField("reqtype", "fileupload");
-    if (hours != 0)
-        addField("time", QByteArray::number(hours) + "h");
+    addField("time", QByteArray::number(hours) + "h");
 
     QHttpPart uploadPart;
     // The name goes into a quoted header value, so strip characters that
@@ -192,12 +185,11 @@ void Uploader::upload(int hours)
     file->setParent(body);
     body->append(uploadPart);
 
-    QNetworkRequest request(endpointFor(hours));
+    QNetworkRequest request(endpoint());
     // For privacy and predictability, do not forward uploads to arbitrary redirects.
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, false);
     request.setRawHeader("User-Agent", "LinkDrop-Sailfish/" APP_VERSION);
 
-    m_hours = hours;
     m_cancelRequested = false;
     m_timedOut = false;
     m_waitingForServer = false;
@@ -294,9 +286,7 @@ void Uploader::finishRequest()
 
     const QString urlText = QString::fromUtf8(body).trimmed();
     const QUrl url(urlText, QUrl::StrictMode);
-    const QString expectedHost = m_hours == 0
-            ? QStringLiteral("files.catbox.moe")
-            : QStringLiteral("litter.catbox.moe");
+    const QString expectedHost = QStringLiteral("litter.catbox.moe");
     if (!url.isValid() ||
             url.scheme() != QStringLiteral("https") ||
             url.host().compare(expectedHost, Qt::CaseInsensitive) != 0 ||
